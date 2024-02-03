@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    name: Build - ${{ matrix.platform.target }}
+    strategy:
+      matrix:
+        platform:
+          - target: x86_64-unknown-freebsd
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+          - target: x86_64-apple-darwin
+            os: macOS-latest
+          - target: aarch64-apple-darwin
+            os: macOS-latest
+          - target: x86_64-apple-ios
+            os: macOS-latest
+          - target: aarch64-apple-ios-sim
+            os: macOS-latest
+          - target: aarch64-apple-ios
+            os: macOS-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--release"
+      - name: list artifacts
+        run: ls target/${{ matrix.platform.target }}/release
+

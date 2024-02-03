@@ -1,0 +1,108 @@
+name: Releasse
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  artifacts:
+    name: Release - ${{ matrix.platform.release_for }}
+    strategy:
+      matrix:
+        platform:
+          - release_for: FreeBSD-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+            artifacts: libdirs.a libdirs.so
+            artifact: libdirs-freebsd-x86_64.tar.gz
+          - release_for: Windows_x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifacts: dirs.dll dirs.dll.exp dirs.dll.lib dirs.lib
+            artifact: libdirs-windows-x86_64.tar.gz
+          - release_for: Windows_arm64
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
+            artifacts: dirs.dll dirs.dll.exp dirs.dll.lib dirs.lib
+            artifact: libdirs-windows-aarch64.tar.gz
+          - release_for: macOS-x86_64
+            os: macOS-latest
+            target: x86_64-apple-darwin
+            artifacts: libdirs.a libdirs.dylib
+            artifact: libdirs-macos-x86_64.tar.gz
+          - release_for: macOS-arm64
+            os: macOS-latest
+            target: aarch64-apple-darwin
+            artifacts: libdirs.a libdirs.dylib
+            artifact: libdirs-macos-aarch64.tar.gz
+          - release_for: iOS Simulator x86_64
+            os: macOS-latest
+            target: x86_64-apple-ios
+            artifacts: libdirs.a libdirs.dylib
+            artifact: libdirs-ios-sim-x86_64.tar.gz
+          - release_for: iOS Simulator arm64
+            os: macOS-latest
+            target: aarch64-apple-ios-sim
+            artifacts: libdirs.a libdirs.dylib
+            artifact: libdirs-ios-sim-aarch64.tar.gz
+          - release_for: iOS
+            os: macOS-latest
+            target: aarch64-apple-ios
+            artifacts: libdirs.a libdirs.dylib
+            artifact: libdirs-ios-aarch64.tar.gz
+          - release_for: Linux_x86_64-gnu
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifacts: libdirs.a libdirs.so
+            artifact: libdirs-linux-gnu-x86_64.tar.gz
+          - release_for: Linux_x86_64-musl
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifacts: libdirs.a
+            artifact: libdirs-linux-musl-x86_64.tar.gz
+          - release_for: Linux_aarch64-gnu
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifacts: libdirs.a libdirs.so
+            artifact: libdirs-linux-gnu-aarch64.tar.gz
+          - release_for: Linux_aarch64-musl
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            artifacts: libdirs.a
+            artifact: libdirs-linux-musl-aarch64.tar.gz
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--release"
+      - name: zip artifacts
+        shell: bash
+        run: |
+          mkdir libdirs
+          for artifact in ${{ matrix.platform.artifacts }}
+          do
+            cp target/${{ matrix.platform.target }}/release/$artifact libdirs/$artifact
+          done
+          tar -czvf ${{ matrix.platform.artifact }} libdirs
+      - name: upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ matrix.platform.artifact }}
+
+  header:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: generate bindings
+        run: |
+          mkdir target || true
+          bash generate_header.sh > target/dirs.h
+      - name: upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/dirs.h
+

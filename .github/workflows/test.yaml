@@ -1,0 +1,43 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ld_env: true
+          # TODO: !!!
+          # - os: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   ld_env: false
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            ld_env: true
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--release"
+      - name: generate header
+        run: bash generate_header.sh > target/dirs.h
+      - name: test
+        shell: bash
+        run: |
+          if [[ "${{ matrix.platform.ld_env }}" == "true" ]]
+          then
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/target/${{ matrix.platform.target }}/release
+            sudo ldconfig "$(pwd)/target/${{ matrix.platform.target }}/release" || true
+          fi
+          gcc test.c -o test -L$(pwd)/target/${{ matrix.platform.target }}/release -ldirs
+          ./test
+
